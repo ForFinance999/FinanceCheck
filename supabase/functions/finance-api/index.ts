@@ -7,6 +7,8 @@ const cors = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const bytesToHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
+const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -28,6 +30,53 @@ async function verifyTelegram(initData: string) {
   const user = JSON.parse(params.get('user') || '{}');
   if (!user.id) throw new Error('Telegram user is missing');
   return user as { id: number; first_name?: string };
+}
+
+const serviceHeaders = () => ({
+  apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}`,
+  'Content-Type': 'application/json',
+  Prefer: 'resolution=merge-duplicates,return=representation',
+});
+
+async function ownsAll(table: string, ids: unknown[], telegramId: number) {
+  const unique = [...new Set(ids.filter(Boolean).map(String))];
+  if (!unique.length) return true;
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data, error } = await supabase.from(table).select('id').in('id', unique).eq('telegram_id', telegramId);
+  if (error) throw error;
+  return data?.length === unique.length;
+}
+
+async function secureData(body: any, telegramId: number) {
+  const table = String(body.table || ''), method = String(body.method || 'GET').toUpperCase();
+  if (!userTables.has(table) || !allowedMethods.has(method)) throw new Error('Unsupported data operation');
+  const query = new URLSearchParams(String(body.query || ''));
+  query.delete('telegram_id');
+  if (method !== 'POST') query.append('telegram_id', `eq.${telegramId}`);
+  const raw = body.body;
+  if (method === 'POST' || method === 'PATCH') {
+    const items = Array.isArray(raw) ? raw : [raw];
+    if (!items.length || items.length > 1000 || items.some((item) => !item || typeof item !== 'object')) throw new Error('Invalid request body');
+    for (const item of items) {
+      delete item.telegram_id;
+      item.telegram_id = telegramId;
+    }
+    if (table === 'transactions') {
+      if (!await ownsAll('accounts', items.map((item) => item.account_id), telegramId)) throw new Error('Account does not belong to the user');
+      if (!await ownsAll('categories', items.map((item) => item.category_id), telegramId)) throw new Error('Category does not belong to the user');
+      if (!await ownsAll('transactions', items.map((item) => item.original_transaction_id), telegramId)) throw new Error('Original transaction does not belong to the user');
+    }
+    if (table === 'category_rules' && !await ownsAll('categories', items.map((item) => item.category_id), telegramId)) throw new Error('Category does not belong to the user');
+  }
+  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/${table}?${query}`, {
+    method,
+    headers: serviceHeaders(),
+    body: method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify(raw),
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`${table}: ${response.status} ${text.slice(0, 300)}`);
+  return text ? JSON.parse(text) : [];
 }
 
 async function financeContext(telegramId: number) {
@@ -66,9 +115,16 @@ async function askAI(question: string, telegramId: number) {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  let user: { id: number; first_name?: string };
   try {
-    const user = await verifyTelegram(request.headers.get('x-telegram-init-data') || '');
+    user = await verifyTelegram(request.headers.get('x-telegram-init-data') || '');
+  } catch (error) {
+    console.error(error);
+    return json({ error: error instanceof Error ? error.message : 'Authentication failed' }, 401);
+  }
+  try {
     const body = await request.json();
+    if (body.action === 'data') return json(await secureData(body, user.id));
     if (body.action === 'ai_query') {
       const question = String(body.question || '').trim().slice(0, 1000);
       if (!question) return json({ error: 'Question is required' }, 400);
@@ -78,6 +134,6 @@ Deno.serve(async (request) => {
     return json({ error: 'Unknown action' }, 400);
   } catch (error) {
     console.error(error);
-    return json({ error: error instanceof Error ? error.message : 'Request failed' }, 401);
+    return json({ error: error instanceof Error ? error.message : 'Request failed' }, 400);
   }
 });
