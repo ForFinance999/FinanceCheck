@@ -17,21 +17,23 @@ body{
     radial-gradient(circle at 100% 20%,#e6f6ea 0,transparent 28%),
     var(--bg);
 }
-.topbar{padding-top:20px}.topbar h1{color:#173b29}.eyebrow{color:#789083}
+.app-shell{padding-left:20px;padding-right:20px}.topbar{padding:24px 2px 22px}.topbar h1{color:#173b29;font-size:29px;letter-spacing:-1px}.eyebrow{color:#789083;text-transform:uppercase;letter-spacing:.09em;font-size:10px;font-weight:750}
 .icon-button{background:#ffffffcc;box-shadow:0 6px 20px #2b694012}
 .hero-card{
   background:linear-gradient(145deg,#e9f8ed 0%,#d9f1e1 58%,#f8fcf9 100%);
   border-color:#c7e6d1;
   box-shadow:0 18px 45px #2b694019;
 }
-.hero-money{color:#123d29}.change{background:#ffffffa8;color:#577263}
+.hero-label{text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:750}.hero-money{color:#123d29;font-size:38px;margin-top:12px}.change{background:#ffffffa8;color:#577263}
 .hero-grid{border-top-color:#96c9a851}.currency-pills{background:#ffffff9c;border:1px solid #cfe6d6}
 .currency-pills button.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px #2e9b6333}
 .metric-card,.list,.deposit-card,.chart-card,.summary-strip,.menu-list,.rates-ticker,.calendar-item,.empty-card,.empty-state{
   box-shadow:0 8px 24px #285f3b0c;
 }
+.quick-entry{margin:13px 0;background:#1f6946;color:#fff;border-radius:24px;padding:18px;box-shadow:0 16px 36px #1f69462b}.quick-entry-copy span{display:block;color:#bfe2cc;text-transform:uppercase;letter-spacing:.08em;font-size:9px;font-weight:750}.quick-entry-copy strong{display:block;font-size:18px;letter-spacing:-.3px;margin-top:6px}.quick-entry-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.quick-entry-actions button{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:15px;background:#ffffff18;color:#fff;font-weight:700;font-size:14px}.quick-entry-actions button:first-child{background:#fff;color:#1d5c3f}.quick-entry-actions button span{font-size:20px;font-weight:400}
 .metric-card,.list,.deposit-card,.chart-card,.summary-strip,.menu-list,.rates-ticker,.calendar-item{background:#ffffffd9}
 .transaction-icon,.account-card,.rate-row,.analytics-grid div,.suite-row,.health-grid article{background:#eff7f1}
+.section-heading h2{font-size:19px;letter-spacing:-.35px}.content-section{margin-top:30px}
 .text-button,.secondary-button,.suite-value button{color:var(--accent-2)}
 .segmented,.period-row{background:#e7f2ea;border:1px solid #d5e7da}
 .segmented button.active,.period-row button.active{background:#fff;color:#1c5839;box-shadow:0 3px 12px #2b694014}
@@ -55,3 +57,4 @@ body{
 .voice-button{background:#ffffffed;color:#247c50;border-color:#bee0c9;box-shadow:0 10px 28px #235a361b}
 .toast{background:#173c29;color:#fff;box-shadow:0 10px 28px #173c2933}
 @media(hover:hover){button:hover:not(:disabled){filter:brightness(.98)}}
+@media(max-width:360px){.app-shell{padding-left:14px;padding-right:14px}.topbar h1{font-size:26px}.hero-money{font-size:33px}}
