@@ -1,0 +1,57 @@
+:root{
+  color-scheme:light;
+  --bg:#f3f8f4;
+  --surface:#ffffff;
+  --surface-2:#edf6ef;
+  --line:#dbe9df;
+  --text:#183126;
+  --muted:#71867a;
+  --accent:#2e9b63;
+  --accent-2:#247d51;
+  --income:#20945c;
+  --expense:#d95d68;
+}
+body{
+  background:
+    radial-gradient(circle at 12% -8%,#dff3e6 0,transparent 33%),
+    radial-gradient(circle at 100% 20%,#e6f6ea 0,transparent 28%),
+    var(--bg);
+}
+.topbar{padding-top:20px}.topbar h1{color:#173b29}.eyebrow{color:#789083}
+.icon-button{background:#ffffffcc;box-shadow:0 6px 20px #2b694012}
+.hero-card{
+  background:linear-gradient(145deg,#e9f8ed 0%,#d9f1e1 58%,#f8fcf9 100%);
+  border-color:#c7e6d1;
+  box-shadow:0 18px 45px #2b694019;
+}
+.hero-money{color:#123d29}.change{background:#ffffffa8;color:#577263}
+.hero-grid{border-top-color:#96c9a851}.currency-pills{background:#ffffff9c;border:1px solid #cfe6d6}
+.currency-pills button.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px #2e9b6333}
+.metric-card,.list,.deposit-card,.chart-card,.summary-strip,.menu-list,.rates-ticker,.calendar-item,.empty-card,.empty-state{
+  box-shadow:0 8px 24px #285f3b0c;
+}
+.metric-card,.list,.deposit-card,.chart-card,.summary-strip,.menu-list,.rates-ticker,.calendar-item{background:#ffffffd9}
+.transaction-icon,.account-card,.rate-row,.analytics-grid div,.suite-row,.health-grid article{background:#eff7f1}
+.text-button,.secondary-button,.suite-value button{color:var(--accent-2)}
+.segmented,.period-row{background:#e7f2ea;border:1px solid #d5e7da}
+.segmented button.active,.period-row button.active{background:#fff;color:#1c5839;box-shadow:0 3px 12px #2b694014}
+.fab,.primary-button,.type-switch button.active,.ai-form button{background:linear-gradient(135deg,#38ad70,#258c59);box-shadow:0 10px 24px #2e9b6330}
+.progress{background:#dfede3}.progress i,.growth-chart i,.net-worth-bar{background:linear-gradient(90deg,#58be7f,#278f5b)}
+.chart-placeholder i{background:#3ca66c}.bottom-nav{background:#fffffff2;border-top-color:#dce9df;box-shadow:0 -8px 28px #234f3210}
+.bottom-nav button.active{color:var(--accent)}
+.security-note{color:#8b641d;background:#fff8e8;border-color:#edd9a7}.security-note.secure{color:#23734d;background:#e8f7ed;border-color:#b9dec6}
+.sheet-backdrop{background:#17332366}.sheet{background:#f9fcfa;border-color:#d8e7dc;box-shadow:0 -20px 60px #17332322}
+.sheet-handle{background:#c4d7ca}.field input,.field select,.ai-form textarea,.split-row select,.split-row input{background:#fff;border-color:#d5e5da}
+.field input:focus,.field select:focus,.ai-form textarea:focus{border-color:#4aa979;box-shadow:0 0 0 3px #45a97418}
+.type-switch{background:#e8f2eb}.calculator-result,.recurring-summary,.score-card,.ai-answer{
+  background:linear-gradient(145deg,#e8f7ed,#f7fcf8);
+  border:1px solid #cce5d4;
+  color:var(--text);
+}
+.score-ring{background:radial-gradient(circle at center,#f4faf6 61%,transparent 63%),conic-gradient(var(--accent) var(--score),#d6e7dc 0)}
+.rate-symbol{background:#dfeee4}.recurring-badge{background:#dff2e5;color:#23734d}
+.ai-suggestions button{background:#eff8f2;color:#267a50;border-color:#cfe4d6}
+.upload-zone{border-color:#9bc9aa;background:#f2faf4}.upload-zone strong{color:#23794d}
+.voice-button{background:#ffffffed;color:#247c50;border-color:#bee0c9;box-shadow:0 10px 28px #235a361b}
+.toast{background:#173c29;color:#fff;box-shadow:0 10px 28px #173c2933}
+@media(hover:hover){button:hover:not(:disabled){filter:brightness(.98)}}
