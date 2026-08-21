@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/interactions.css?v=2026082205">
   <link rel="stylesheet" href="css/ai.css?v=2026082201">
   <link rel="stylesheet" href="css/suite.css?v=2026082203">
-  <link rel="stylesheet" href="css/theme-light.css?v=2026082203">
+  <link rel="stylesheet" href="css/theme-light.css?v=2026082204">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -131,13 +131,15 @@
         <div class="type-switch">
           <button type="button" class="active" data-form-type="expense">Расход</button>
           <button type="button" data-form-type="income">Доход</button>
+          <button type="button" data-form-type="transfer">Перевод</button>
         </div>
         <label class="field amount-field"><span>Сумма</span><div><input id="transaction-amount" type="number" min="0.00000001" step="any" inputmode="decimal" placeholder="0" required><b id="transaction-currency">₽</b></div></label>
-        <label class="field"><span>Счёт</span><select id="transaction-account" required></select></label>
-        <label class="field"><span>Категория</span><select id="transaction-category" required></select></label>
+        <label class="field"><span id="transaction-account-label">Откуда списать</span><select id="transaction-account" required></select></label>
+        <label class="field" id="transaction-destination-field" hidden><span>Куда перевести</span><select id="transaction-destination-account"></select></label>
+        <label class="field" id="transaction-category-field"><span>Категория</span><select id="transaction-category" required></select></label>
         <label class="field"><span>Дата</span><input id="transaction-date" type="date" required></label>
         <label class="field"><span>Комментарий</span><input id="transaction-note" type="text" maxlength="120" placeholder="Необязательно"></label>
-        <div class="form-grid"><label class="field"><span>Магазин / сервис</span><input id="transaction-merchant" maxlength="80" placeholder="Ozon, Яндекс"></label><label class="field"><span>Теги</span><input id="transaction-tags" maxlength="120" placeholder="отпуск, работа"></label></div>
+        <div class="form-grid" id="transaction-meta-fields"><label class="field"><span id="transaction-counterparty-label">Куда ушло</span><input id="transaction-merchant" maxlength="80" list="counterparty-options" placeholder="Магазин, человек, компания"><datalist id="counterparty-options"></datalist></label><label class="field"><span>Теги</span><input id="transaction-tags" maxlength="120" placeholder="отпуск, работа"></label></div>
         <button class="secondary-button wide" id="toggle-split" type="button">Разделить покупку по категориям</button>
         <div id="split-editor" hidden><div id="split-rows"></div><button class="text-button" id="add-split-row" type="button">+ Добавить часть</button><p class="split-total" id="split-total">Распределено: 0 ₽</p></div>
         <button class="primary-button" id="save-transaction" type="submit">Сохранить операцию</button>
@@ -174,7 +176,7 @@
   <div class="sheet-backdrop" id="refund-sheet" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="refund-title"><div class="sheet-handle"></div><div class="sheet-heading"><div><h2 id="refund-title">Возврат покупки</h2><p class="sheet-subtitle" id="refund-source">Исходная операция</p></div><button class="icon-button" data-close="refund-sheet" aria-label="Закрыть">×</button></div><form id="refund-form"><input id="refund-original" type="hidden"><label class="field"><span>Сумма возврата</span><input id="refund-amount" type="number" min="0.01" step="any" required></label><label class="field"><span>Дата</span><input id="refund-date" type="date" required></label><label class="field"><span>Комментарий</span><input id="refund-note" maxlength="120" value="Возврат"></label><button class="primary-button" type="submit">Сохранить возврат</button></form></section></div>
   <button class="voice-button" id="voice-input" type="button" aria-label="Добавить расход голосом">●<span>Голос</span></button>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script type="module" src="js/app.js?v=2026082210"></script>
+  <script type="module" src="js/app.js?v=2026082211"></script>
   <script type="module" src="js/suite.js?v=2026082206"></script>
 </body>
 </html>
