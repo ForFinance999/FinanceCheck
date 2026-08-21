@@ -65,6 +65,7 @@ async function secureData(body: any, telegramId: number) {
     }
     if (table === 'transactions') {
       if (!await ownsAll('accounts', items.map((item) => item.account_id), telegramId)) throw new Error('Account does not belong to the user');
+      if (!await ownsAll('accounts', items.map((item) => item.destination_account_id), telegramId)) throw new Error('Destination account does not belong to the user');
       if (!await ownsAll('categories', items.map((item) => item.category_id), telegramId)) throw new Error('Category does not belong to the user');
       if (!await ownsAll('transactions', items.map((item) => item.original_transaction_id), telegramId)) throw new Error('Original transaction does not belong to the user');
     }
@@ -84,7 +85,7 @@ async function financeContext(telegramId: number) {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const [accounts, transactions, deposits, events, debts, assets, rules, snapshots] = await Promise.all([
     supabase.from('accounts').select('id,name,currency,initial_balance').eq('telegram_id', telegramId),
-    supabase.from('transactions').select('id,type,amount,currency,fx_rate_to_rub,merchant,tags,note,transaction_date,account_id,split_group,original_transaction_id,is_refund,categories(name)').eq('telegram_id', telegramId).order('transaction_date', { ascending: false }).limit(1000),
+    supabase.from('transactions').select('id,type,amount,currency,fx_rate_to_rub,merchant,tags,note,transaction_date,account_id,destination_account_id,from_name,to_name,split_group,original_transaction_id,is_refund,categories(name)').eq('telegram_id', telegramId).order('transaction_date', { ascending: false }).limit(1000),
     supabase.from('deposits').select('name,bank_name,principal,currency,annual_rate,start_date,end_date,capitalization').eq('telegram_id', telegramId),
     supabase.from('financial_events').select('title,event_type,amount,currency,event_date,recurrence').eq('telegram_id', telegramId),
     supabase.from('debts').select('person,direction,amount,currency,due_date,note,is_settled').eq('telegram_id', telegramId),
