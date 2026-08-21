@@ -9,6 +9,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const bytesToHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
 const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
+const allowedTelegramIds = new Set([254151180]);
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -122,6 +123,7 @@ Deno.serve(async (request) => {
     console.error(error);
     return json({ error: error instanceof Error ? error.message : 'Authentication failed' }, 401);
   }
+  if (!allowedTelegramIds.has(Number(user.id))) return json({ error: 'Access denied' }, 403);
   try {
     const body = await request.json();
     if (body.action === 'data') return json(await secureData(body, user.id));
