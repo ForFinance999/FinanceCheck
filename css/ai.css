@@ -1,0 +1,15 @@
+.security-note.secure{color:#7ee1ba;background:#44d49c12;border-color:#44d49c33}
+.ai-sheet{display:flex;flex-direction:column;min-height:min(680px,88vh)}
+.ai-suggestions{display:flex;gap:8px;overflow-x:auto;padding:0 0 14px;scrollbar-width:none}
+.ai-suggestions::-webkit-scrollbar{display:none}
+.ai-suggestions button{flex:0 0 auto;max-width:230px;border:1px solid var(--line);background:var(--surface-2);color:var(--accent-2);border-radius:999px;padding:10px 13px;font-size:12px;text-align:left}
+.ai-answer{flex:1;min-height:220px;background:linear-gradient(145deg,#211e37,#171922);border:1px solid #302b50;border-radius:20px;padding:18px;color:var(--text);font-size:14px;line-height:1.6;white-space:pre-wrap;overflow:auto}
+.ai-answer span{color:var(--muted)}
+.ai-answer.is-loading{color:var(--muted)}
+.ai-form{display:grid;grid-template-columns:1fr 48px;gap:8px;margin-top:12px}
+.ai-form textarea{resize:none;width:100%;border:1px solid var(--line);border-radius:16px;background:var(--surface-2);color:var(--text);font:inherit;font-size:15px;padding:13px;outline:none}
+.ai-form textarea:focus{border-color:var(--accent)}
+.ai-form button{border:0;border-radius:16px;background:var(--accent);color:#fff;font-size:23px}
+.ai-form button:disabled{opacity:.5}
+.ai-privacy{color:var(--muted);font-size:10px;line-height:1.45;text-align:center;margin:10px 0 0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
