@@ -1,0 +1,2 @@
+[functions.finance-api]
+verify_jwt = false
