@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/interactions.css?v=2026082205">
   <link rel="stylesheet" href="css/ai.css?v=2026082201">
   <link rel="stylesheet" href="css/suite.css?v=2026082203">
-  <link rel="stylesheet" href="css/theme-light.css?v=2026082211">
+  <link rel="stylesheet" href="css/theme-light.css?v=2026082212">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -39,7 +39,7 @@
             <div><span>Во вкладах</span><strong id="deposits-total">—</strong></div>
           </div>
         </article>
-        <section class="home-accounts-section"><div class="section-heading"><h2>Мои счета</h2><button class="text-button" id="add-account-home">+ Добавить</button></div><div id="home-accounts-list" class="home-accounts-list"></div></section>
+        <section class="home-accounts-section"><div class="section-heading"><h2>Мои счета</h2><button class="text-button" id="add-account-home">+ Добавить</button></div><div id="home-accounts-list" class="home-accounts-list"></div><button type="button" class="accounts-expand-toggle" id="accounts-expand-toggle" hidden></button></section>
 
         <section class="quick-entry" aria-label="Быстрое добавление операции">
           <div class="quick-entry-copy"><span>Быстрая запись</span><strong>Что произошло с деньгами?</strong></div>
@@ -187,7 +187,7 @@
   <div class="sheet-backdrop" id="refund-sheet" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="refund-title"><div class="sheet-handle"></div><div class="sheet-heading"><div><h2 id="refund-title">Возврат покупки</h2><p class="sheet-subtitle" id="refund-source">Исходная операция</p></div><button class="icon-button" data-close="refund-sheet" aria-label="Закрыть">×</button></div><form id="refund-form"><input id="refund-original" type="hidden"><label class="field"><span>Сумма возврата</span><input id="refund-amount" type="text" inputmode="decimal" data-money-input required></label><label class="field"><span>Дата</span><input id="refund-date" type="date" required></label><label class="field"><span>Комментарий</span><input id="refund-note" maxlength="120" value="Возврат"></label><button class="primary-button" type="submit">Сохранить возврат</button></form></section></div>
   <button class="voice-button" id="voice-input" type="button" aria-label="Добавить расход голосом">●<span>Голос</span></button>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script type="module" src="js/app.js?v=2026082226"></script>
-  <script type="module" src="js/suite.js?v=2026082216"></script>
+  <script type="module" src="js/app.js?v=2026082228"></script>
+  <script type="module" src="js/suite.js?v=2026082217"></script>
 </body>
 </html>
