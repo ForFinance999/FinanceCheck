@@ -9,7 +9,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const bytesToHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
 const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
-const allowedTelegramIds = new Set([254151180]);
+const allowedTelegramIds = new Set([254151180, 5333181133]);
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function openAIError(response: Response, feature: 'ai' | 'voice') {
