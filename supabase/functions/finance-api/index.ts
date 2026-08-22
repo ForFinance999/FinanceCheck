@@ -109,9 +109,44 @@ async function askAI(question: string, telegramId: number) {
       input: `Вопрос пользователя: ${question}\n\nФинансовые данные:\n${JSON.stringify(context)}`,
     }),
   });
-  if (!response.ok) throw new Error(`OpenAI request failed: ${response.status}`);
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error('OpenAI responses error', response.status, detail.slice(0, 500));
+    throw new Error(`AI временно недоступен (${response.status})`);
+  }
   const data = await response.json();
-  return data.output?.flatMap((item: any) => item.content || []).find((item: any) => item.type === 'output_text')?.text || 'Не удалось сформировать ответ.';
+  const nested = data.output?.flatMap((item: any) => item.content || []).filter((item: any) => item.type === 'output_text').map((item: any) => item.text).filter(Boolean).join('\n');
+  const answer = String(data.output_text || nested || '').trim();
+  if (!answer) {
+    console.error('OpenAI returned no text', JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details, error: data.error }));
+    throw new Error(data.incomplete_details?.reason ? `AI не завершил ответ: ${data.incomplete_details.reason}` : 'AI вернул пустой ответ. Попробуйте ещё раз.');
+  }
+  return answer;
+}
+
+async function transcribeVoice(audio: string, mimeType: string) {
+  const key = Deno.env.get('OPENAI_API_KEY');
+  if (!key) throw new Error('AI is not configured');
+  if (!audio || audio.length > 8_000_000) throw new Error('Запись пустая или слишком большая');
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0)); } catch { throw new Error('Повреждённая аудиозапись'); }
+  const safeMime = ['audio/mp4', 'audio/webm', 'audio/mpeg', 'audio/wav', 'audio/ogg'].find((value) => String(mimeType).startsWith(value)) || 'audio/webm';
+  const extension = safeMime === 'audio/mp4' ? 'm4a' : safeMime.split('/')[1];
+  const form = new FormData();
+  form.append('file', new Blob([bytes], { type: safeMime }), `voice.${extension}`);
+  form.append('model', Deno.env.get('OPENAI_TRANSCRIBE_MODEL') || 'gpt-4o-mini-transcribe');
+  form.append('language', 'ru');
+  form.append('prompt', 'Короткая команда о личных расходах. Сохрани числа цифрами.');
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error('OpenAI transcription error', response.status, detail.slice(0, 500));
+    throw new Error(`Не удалось распознать голос (${response.status})`);
+  }
+  const data = await response.json();
+  const text = String(data.text || '').trim();
+  if (!text) throw new Error('Не удалось разобрать запись');
+  return text;
 }
 
 Deno.serve(async (request) => {
@@ -133,6 +168,7 @@ Deno.serve(async (request) => {
       if (!question) return json({ error: 'Question is required' }, 400);
       return json({ answer: await askAI(question, user.id) });
     }
+    if (body.action === 'voice_transcribe') return json({ text: await transcribeVoice(String(body.audio || ''), String(body.mime_type || '')) });
     if (body.action === 'session') return json({ ok: true, telegram_id: user.id });
     return json({ error: 'Unknown action' }, 400);
   } catch (error) {
