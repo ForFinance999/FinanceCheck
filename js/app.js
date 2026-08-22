@@ -1,4 +1,4 @@
-const OWNER_ID=254151180,URL='https://npbvswygsjkogeuvddgm.supabase.co',tg=window.Telegram?.WebApp,user=tg?.initDataUnsafe?.user??null,authorized=Number(user?.id)===OWNER_ID;
+const ALLOWED_IDS=new Set([254151180,5333181133]),URL='https://npbvswygsjkogeuvddgm.supabase.co',tg=window.Telegram?.WebApp,user=tg?.initDataUnsafe?.user??null,authorized=ALLOWED_IDS.has(Number(user?.id));
 const S={accounts:[],categories:[],transactions:[],deposits:[],events:[],debts:[],assets:[],rules:[],snapshots:[],rates:null,filter:'all',formType:'expense',period:'month',base:localStorage.finance_base||'RUB',demo:!user,bootstrapped:false,loading:false,pendingDelete:null};
 const SYM={RUB:'₽',USD:'$',CNY:'¥',BTC:'₿',ETH:'Ξ',USDT:'₮',TRX:'TRX'},COIN={BTC:'bitcoin',ETH:'ethereum',USDT:'tether',TRX:'tron'},$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),days=(a,b)=>Math.ceil((new Date(b)-new Date(a))/86400000),clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
