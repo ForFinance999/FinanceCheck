@@ -10,6 +10,18 @@ const bytesToHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).p
 const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
 const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 const allowedTelegramIds = new Set([254151180]);
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function openAIError(response: Response, feature: 'ai' | 'voice') {
+  const requestId = response.headers.get('x-request-id') || 'unknown';
+  const raw = await response.text();
+  let code = '', message = '';
+  try { const data = JSON.parse(raw); code = String(data.error?.code || data.error?.type || ''); message = String(data.error?.message || ''); } catch { message = raw; }
+  console.error(`OpenAI ${feature} error`, JSON.stringify({ status: response.status, code, requestId, message: message.slice(0, 300) }));
+  if (response.status === 429 && ['insufficient_quota', 'billing_hard_limit_reached'].includes(code)) return new Error('На OpenAI API закончился баланс. Пополните API Billing и попробуйте снова.');
+  if (response.status === 429) return new Error('OpenAI временно ограничил запросы. Подождите минуту и попробуйте снова.');
+  return new Error(`${feature === 'voice' ? 'Распознавание голоса' : 'AI'} временно недоступно (${response.status})`);
+}
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -110,9 +122,7 @@ async function askAI(question: string, telegramId: number) {
     }),
   });
   if (!response.ok) {
-    const detail = await response.text();
-    console.error('OpenAI responses error', response.status, detail.slice(0, 500));
-    throw new Error(`AI временно недоступен (${response.status})`);
+    throw await openAIError(response, 'ai');
   }
   const data = await response.json();
   const nested = data.output?.flatMap((item: any) => item.content || []).filter((item: any) => item.type === 'output_text').map((item: any) => item.text).filter(Boolean).join('\n');
@@ -137,12 +147,18 @@ async function transcribeVoice(audio: string, mimeType: string) {
   form.append('model', Deno.env.get('OPENAI_TRANSCRIBE_MODEL') || 'gpt-4o-mini-transcribe');
   form.append('language', 'ru');
   form.append('prompt', 'Короткая команда о личных расходах. Сохрани числа цифрами.');
-  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
-  if (!response.ok) {
-    const detail = await response.text();
-    console.error('OpenAI transcription error', response.status, detail.slice(0, 500));
-    throw new Error(`Не удалось распознать голос (${response.status})`);
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
+    if (response.ok) break;
+    if (response.status !== 429) throw await openAIError(response, 'voice');
+    const clone = response.clone();
+    let code = '';
+    try { code = String((await clone.json()).error?.code || ''); } catch { /* handled below */ }
+    if (['insufficient_quota', 'billing_hard_limit_reached'].includes(code) || attempt === 2) throw await openAIError(response, 'voice');
+    await wait(1200 * (attempt + 1));
   }
+  if (!response?.ok) throw new Error('Распознавание голоса временно недоступно');
   const data = await response.json();
   const text = String(data.text || '').trim();
   if (!text) throw new Error('Не удалось разобрать запись');
