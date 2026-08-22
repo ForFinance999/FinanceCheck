@@ -33,6 +33,7 @@ body{
 .quick-entry{margin:13px 0;background:#1f6946;color:#fff;border-radius:24px;padding:18px;box-shadow:0 16px 36px #1f69462b}.quick-entry-copy span{display:block;color:#bfe2cc;text-transform:uppercase;letter-spacing:.08em;font-size:9px;font-weight:750}.quick-entry-copy strong{display:block;font-size:18px;letter-spacing:-.3px;margin-top:6px}.quick-entry-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.quick-entry-actions button{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:15px;background:#ffffff18;color:#fff;font-weight:700;font-size:14px}.quick-entry-actions button:first-child{background:#fff;color:#1d5c3f}.quick-entry-actions button span{font-size:20px;font-weight:400}
 .metric-card,.list,.deposit-card,.chart-card,.summary-strip,.menu-list,.rates-ticker,.calendar-item{background:#ffffffd9}
 .transaction-icon,.account-card,.rate-row,.analytics-grid div,.suite-row,.health-grid article{background:#eff7f1}
+.transaction-icon svg{width:22px;height:22px;fill:none;stroke:#28734d;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .section-heading h2{font-size:19px;letter-spacing:-.35px}.content-section{margin-top:30px}
 .text-button,.secondary-button,.suite-value button{color:var(--accent-2)}
 .segmented,.period-row{background:#e7f2ea;border:1px solid #d5e7da}
