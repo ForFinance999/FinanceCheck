@@ -97,7 +97,7 @@ async function financeContext(telegramId: number) {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const [accounts, transactions, deposits, events, debts, assets, rules, snapshots] = await Promise.all([
     supabase.from('accounts').select('id,name,currency,initial_balance').eq('telegram_id', telegramId),
-    supabase.from('transactions').select('id,type,amount,currency,fx_rate_to_rub,merchant,tags,note,transaction_date,account_id,destination_account_id,from_name,to_name,split_group,original_transaction_id,is_refund,categories(name)').eq('telegram_id', telegramId).order('transaction_date', { ascending: false }).limit(1000),
+    supabase.from('transactions').select('id,type,amount,currency,fx_rate_to_rub,merchant,tags,note,transaction_date,account_id,destination_account_id,from_name,to_name,split_group,original_transaction_id,is_refund,source,categories(name)').eq('telegram_id', telegramId).order('transaction_date', { ascending: false }).limit(1000),
     supabase.from('deposits').select('name,bank_name,principal,currency,annual_rate,start_date,end_date,capitalization').eq('telegram_id', telegramId),
     supabase.from('financial_events').select('title,event_type,amount,currency,event_date,recurrence').eq('telegram_id', telegramId),
     supabase.from('debts').select('person,direction,amount,currency,due_date,note,is_settled').eq('telegram_id', telegramId),
@@ -117,7 +117,7 @@ async function askAI(question: string, telegramId: number) {
     method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: Deno.env.get('OPENAI_MODEL') || 'gpt-5.4', store: false, max_output_tokens: 900,
-      instructions: 'Ты финансовый аналитик личного бюджета. Отвечай по-русски, кратко и только по переданным данным. Не выдумывай операции. Это аналитика, не инвестиционная рекомендация.',
+      instructions: 'Ты финансовый аналитик личного бюджета. Отвечай по-русски, кратко и только по переданным данным. Не выдумывай операции. Операции с source=import_internal_transfer являются движениями между своими счетами: не считай их доходами или расходами. Это аналитика, не инвестиционная рекомендация.',
       input: `Вопрос пользователя: ${question}\n\nФинансовые данные:\n${JSON.stringify(context)}`,
     }),
   });
@@ -134,6 +134,44 @@ async function askAI(question: string, telegramId: number) {
   return answer;
 }
 
+async function analyzeStatement(rows: any[], telegramId: number) {
+  const key = Deno.env.get('OPENAI_API_KEY');
+  if (!key) throw new Error('AI is not configured');
+  if (!Array.isArray(rows) || !rows.length || rows.length > 120) throw new Error('Для AI-разбора нужно от 1 до 120 операций');
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data: categories, error } = await supabase.from('categories').select('name,type').eq('telegram_id', telegramId);
+  if (error) throw error;
+  const safeRows = rows.map((row, index) => ({
+    index: Number.isInteger(row?.index) ? row.index : index,
+    date: String(row?.date || '').slice(0, 10),
+    amount: Math.abs(Number(row?.amount || 0)),
+    type: row?.type === 'income' ? 'income' : 'expense',
+    description: String(row?.description || '').replace(/\b\d{12,20}\b/g, '[номер скрыт]').slice(0, 180),
+  })).filter((row) => row.amount > 0);
+  const categoryNames = (categories || []).map((category) => `${category.type}: ${category.name}`);
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: Deno.env.get('OPENAI_MODEL') || 'gpt-5.4', store: false, max_output_tokens: 5000,
+      instructions: `Ты классификатор российских банковских операций из выписки Т-Банка. Для каждой строки верни ровно один элемент. Определи income или expense по смыслу и входному знаку. kind=internal_transfer только для движения между своими счетами/договорами, «перевод себе», снятия наличных; external_transfer — перевод другому человеку; purchase — покупка/услуга; income — зарплата, проценты, кэшбэк или пополнение извне; refund — отмена/возврат. Понимай российские бренды и транслитерацию: PRO.KHINKALI и рестораны — Кафе, LUKOIL/ЛУКОЙЛ/ROSNEFT — Транспорт, PEREKRESTOK — Продукты, MOSPARKING/PARKING — Транспорт, GOSUSLUGI — Другое. Очисти merchant до короткого узнаваемого названия. Выбери category только из списка категорий пользователя. Не возвращай ФИО владельца, адрес, договор, счёт, телефон или номер карты. Категории:\n${categoryNames.join('\n')}`,
+      input: JSON.stringify(safeRows),
+      text: { format: { type: 'json_schema', name: 'statement_classification', strict: true, schema: {
+        type: 'object', additionalProperties: false, required: ['items'], properties: { items: { type: 'array', items: {
+          type: 'object', additionalProperties: false, required: ['index','type','kind','merchant','category'], properties: {
+            index: { type: 'integer' }, type: { type: 'string', enum: ['income','expense'] }, kind: { type: 'string', enum: ['purchase','external_transfer','internal_transfer','income','refund'] }, merchant: { type: 'string' }, category: { type: 'string' },
+          },
+        } } },
+      } } },
+    }),
+  });
+  if (!response.ok) throw await openAIError(response, 'ai');
+  const data = await response.json();
+  const nested = data.output?.flatMap((item: any) => item.content || []).find((item: any) => item.type === 'output_text')?.text;
+  const parsed = JSON.parse(String(data.output_text || nested || '{}'));
+  const allowed = new Set((categories || []).map((category) => category.name));
+  return { items: (Array.isArray(parsed.items) ? parsed.items : []).map((item: any) => ({ ...item, category: allowed.has(item.category) ? item.category : '' })) };
+}
+
 async function transcribeVoice(audio: string, mimeType: string) {
   const key = Deno.env.get('OPENAI_API_KEY');
   if (!key) throw new Error('AI is not configured');
@@ -146,7 +184,7 @@ async function transcribeVoice(audio: string, mimeType: string) {
   form.append('file', new Blob([bytes], { type: safeMime }), `voice.${extension}`);
   form.append('model', Deno.env.get('OPENAI_TRANSCRIBE_MODEL') || 'gpt-4o-mini-transcribe');
   form.append('language', 'ru');
-  form.append('prompt', 'Короткая команда о личных расходах. Сохрани числа цифрами.');
+  form.append('prompt', 'Короткая команда о личных финансах: расход, доход, зарплата, пополнение или перевод между счетами. Возможны названия банков и счетов: Т-Банк, Тинек, Тинькофф, Сбер, наличные. Возможны имена людей. Примеры: «потратил 3500 на бензин с Тинека», «перевод от Кати 1000 рублей на Тинек», «зарплата от Кати 1000 на Тинек», «переведи 5000 с Тинека на Сбер». Сохрани имена и названия счетов, числа запиши цифрами.');
   let response: Response | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     response = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
@@ -184,6 +222,7 @@ Deno.serve(async (request) => {
       if (!question) return json({ error: 'Question is required' }, 400);
       return json({ answer: await askAI(question, user.id) });
     }
+    if (body.action === 'statement_analyze') return json(await analyzeStatement(body.rows, user.id));
     if (body.action === 'voice_transcribe') return json({ text: await transcribeVoice(String(body.audio || ''), String(body.mime_type || '')) });
     if (body.action === 'session') return json({ ok: true, telegram_id: user.id });
     return json({ error: 'Unknown action' }, 400);
