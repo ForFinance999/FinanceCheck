@@ -7,7 +7,7 @@ const cors = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const bytesToHex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
-const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
+const userTables = new Set(['profiles', 'accounts', 'categories', 'transactions', 'deposits', 'ofz_positions', 'financial_events', 'debts', 'assets', 'category_rules', 'net_worth_snapshots']);
 const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 const allowedTelegramIds = new Set([254151180, 5333181133, 211312632]);
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -93,20 +93,42 @@ async function secureData(body: any, telegramId: number) {
   return text ? JSON.parse(text) : [];
 }
 
+type MoexBlock = { columns?: string[]; data?: unknown[][] };
+const moexRows = (block?: MoexBlock) => (block?.data || []).map((row) => Object.fromEntries((block?.columns || []).map((column, index) => [column, row[index]])));
+
+async function fetchOfzCatalog(secids: string[] = []) {
+  const columns = 'SECID,SHORTNAME,SECNAME,PREVPRICE,FACEVALUE,FACEUNIT,MATDATE,COUPONVALUE,NEXTCOUPON,COUPONPERCENT,ACCRUEDINT,LOTSIZE';
+  const marketColumns = 'SECID,LAST,MARKETPRICE,YIELD,UPDATETIME';
+  const url = new URL('https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json');
+  url.searchParams.set('iss.meta', 'off');
+  url.searchParams.set('iss.only', 'securities,marketdata');
+  url.searchParams.set('securities.columns', columns);
+  url.searchParams.set('marketdata.columns', marketColumns);
+  if (secids.length) url.searchParams.set('securities', secids.join(','));
+  const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'FinanceCheck/1.0' }, signal: AbortSignal.timeout(9000) });
+  if (!response.ok) throw new Error(`MOEX unavailable: ${response.status}`);
+  const data = await response.json(), market = new Map(moexRows(data.marketdata).map((row: any) => [String(row.SECID), row]));
+  return moexRows(data.securities).filter((row: any) => /^SU/.test(String(row.SECID || '')) && row.FACEUNIT === 'SUR' && String(row.SHORTNAME || '').includes('ОФЗ')).map((row: any) => {
+    const quote: any = market.get(String(row.SECID)) || {};
+    return { secid: row.SECID, short_name: row.SHORTNAME, full_name: row.SECNAME, price_percent: Number(quote.LAST ?? quote.MARKETPRICE ?? row.PREVPRICE ?? 0), face_value: Number(row.FACEVALUE || 1000), face_currency: row.FACEUNIT === 'SUR' ? 'RUB' : row.FACEUNIT, maturity_date: row.MATDATE, coupon_value: Number(row.COUPONVALUE || 0), next_coupon_date: row.NEXTCOUPON, coupon_percent: row.COUPONPERCENT == null ? null : Number(row.COUPONPERCENT), accrued_interest: Number(row.ACCRUEDINT || 0), lot_size: Number(row.LOTSIZE || 1), yield_percent: quote.YIELD == null ? null : Number(quote.YIELD), updated_at: quote.UPDATETIME };
+  }).filter((item: any) => item.price_percent > 0 && item.face_value > 0).sort((a: any, b: any) => String(a.maturity_date).localeCompare(String(b.maturity_date)));
+}
+
 async function financeContext(telegramId: number) {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const [accounts, transactions, deposits, events, debts, assets, rules, snapshots] = await Promise.all([
+  const [accounts, transactions, deposits, ofz, events, debts, assets, rules, snapshots] = await Promise.all([
     supabase.from('accounts').select('id,name,currency,initial_balance').eq('telegram_id', telegramId),
     supabase.from('transactions').select('id,type,amount,currency,fx_rate_to_rub,merchant,tags,note,transaction_date,account_id,destination_account_id,from_name,to_name,split_group,original_transaction_id,is_refund,source,categories(name)').eq('telegram_id', telegramId).order('transaction_date', { ascending: false }).limit(1000),
     supabase.from('deposits').select('name,bank_name,principal,currency,annual_rate,start_date,end_date,capitalization').eq('telegram_id', telegramId),
+    supabase.from('ofz_positions').select('secid,short_name,quantity,invested_amount,purchase_price_percent,current_price_percent,face_value,accrued_interest,coupon_value,coupon_percent,next_coupon_date,maturity_date,yield_percent,broker,purchase_date').eq('telegram_id', telegramId),
     supabase.from('financial_events').select('title,event_type,amount,currency,event_date,recurrence').eq('telegram_id', telegramId),
     supabase.from('debts').select('person,direction,amount,currency,due_date,note,is_settled').eq('telegram_id', telegramId),
     supabase.from('assets').select('name,asset_type,symbol,quantity,purchase_price,current_price,currency,valuation_mode').eq('telegram_id', telegramId),
     supabase.from('category_rules').select('pattern,match_field,is_active,categories(name)').eq('telegram_id', telegramId),
     supabase.from('net_worth_snapshots').select('snapshot_date,net_worth_rub,accounts_rub,deposits_rub,assets_rub,debts_rub').eq('telegram_id', telegramId).order('snapshot_date', { ascending: true }).limit(400),
   ]);
-  for (const result of [accounts, transactions, deposits, events, debts, assets, rules, snapshots]) if (result.error) throw result.error;
-  return { accounts: accounts.data, transactions: transactions.data, deposits: deposits.data, events: events.data, debts: debts.data, assets: assets.data, rules: rules.data, net_worth_history: snapshots.data };
+  for (const result of [accounts, transactions, deposits, ofz, events, debts, assets, rules, snapshots]) if (result.error) throw result.error;
+  return { accounts: accounts.data, transactions: transactions.data, deposits: deposits.data, ofz: ofz.data, events: events.data, debts: debts.data, assets: assets.data, rules: rules.data, net_worth_history: snapshots.data };
 }
 
 async function askAI(question: string, telegramId: number) {
@@ -217,6 +239,12 @@ Deno.serve(async (request) => {
   try {
     const body = await request.json();
     if (body.action === 'data') return json(await secureData(body, user.id));
+    if (body.action === 'ofz_catalog') return json({ items: await fetchOfzCatalog() });
+    if (body.action === 'ofz_quotes') {
+      const secids = [...new Set((Array.isArray(body.secids) ? body.secids : []).map((value: unknown) => String(value).toUpperCase()).filter((value: string) => /^(SU|RU)[A-Z0-9]{8,16}$/.test(value)))].slice(0, 100);
+      if (!secids.length) return json({ items: [] });
+      return json({ items: await fetchOfzCatalog(secids) });
+    }
     if (body.action === 'ai_query') {
       const question = String(body.question || '').trim().slice(0, 1000);
       if (!question) return json({ error: 'Question is required' }, 400);
