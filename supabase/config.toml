@@ -1,2 +1,5 @@
 [functions.finance-api]
 verify_jwt = false
+
+[functions.healthcheck]
+verify_jwt = false
